@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { motion } from 'framer-motion';
+import { useState, useEffect } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
 import { FileText, Mail } from 'lucide-react';
 import { scrollToSection } from '../../utils/scrollUtils';
 import ResumeModal from '../shared/ResumeModal';
@@ -20,6 +20,160 @@ const fadeInRight = {
   visible: { opacity: 1, x: 0, transition: { duration: 0.6 } }
 };
 
+/**
+ * ========================================
+ * ANIMATED NAME CYCLING COMPONENT
+ * ========================================
+ * 
+ * PURPOSE:
+ * Displays an animated name that cycles through multiple parts
+ * (Shivam → Kumar → Maurya) with smooth directional transitions.
+ * 
+ * ALIGNMENT PRINCIPLES:
+ * 1. Uses inline-flex container for perfect baseline alignment
+ * 2. Animates ONLY opacity and transform - NEVER position or margins
+ * 3. Reserves fixed space to prevent layout shifts during animation
+ * 4. Matches parent text size, weight, and line-height exactly
+ * 
+ * ACCESSIBILITY:
+ * - Full name provided in aria-label for screen readers
+ * - Visual animation does not affect semantic meaning
+ * 
+ * RESPONSIVENESS:
+ * - Container width adjusts based on longest name variant
+ * - Works seamlessly with responsive text sizes (text-5xl md:text-6xl)
+ * - Maintains alignment on all screen sizes
+ * 
+ * MODULARITY:
+ * To change names: Update NAMES array below
+ * To adjust timing: Modify interval duration (currently 2500ms)
+ * To change animations: Update getAnimationVariants function
+ */
+
+// Configuration: Name variants to cycle through
+// Add/remove items here to customize the animation
+const NAMES = [
+  { text: 'Shivam', direction: 'left', ariaLabel: 'Shivam' },
+  { text: 'Kumar', direction: 'top', ariaLabel: 'Kumar' },
+  { text: 'Maurya', direction: 'bottom', ariaLabel: 'Maurya' },
+];
+
+/**
+ * Get animation variants based on entry direction
+ * These animations ONLY affect opacity and transform (x, y)
+ * Position remains stable - no margin/padding changes
+ */
+const getAnimationVariants = (direction) => {
+  const distance = 80; // Animation travel distance in pixels
+  
+  const variants = {
+    left: {
+      initial: { opacity: 0, x: -distance },
+      animate: { opacity: 1, x: 0 },
+      exit: { opacity: 0, x: distance },
+    },
+    top: {
+      initial: { opacity: 0, y: -distance },
+      animate: { opacity: 1, y: 0 },
+      exit: { opacity: 0, y: distance },
+    },
+    bottom: {
+      initial: { opacity: 0, y: distance },
+      animate: { opacity: 1, y: 0 },
+      exit: { opacity: 0, y: -distance },
+    },
+  };
+
+  return variants[direction];
+};
+
+const AnimatedName = () => {
+  const [currentIndex, setCurrentIndex] = useState(0);
+
+  // Cycle through name variants automatically
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setCurrentIndex((prev) => (prev + 1) % NAMES.length);
+    }, 2500); // Duration each name is displayed (in ms)
+
+    return () => clearInterval(interval);
+  }, []);
+
+  const currentName = NAMES[currentIndex];
+  
+  // Calculate container width based on longest name
+  // Prevents layout shifts when switching names
+  const maxNameLength = Math.max(...NAMES.map(n => n.text.length));
+  const containerWidth = maxNameLength * 0.6; // Approximate character width ratio
+
+  return (
+    /**
+     * ALIGNMENT CONTAINER
+     * - inline-flex: Allows baseline alignment with surrounding text
+     * - position: relative: Creates positioning context for absolute children
+     * - Reserves space equal to widest name to prevent layout shifts
+     */
+    <span 
+      className="inline-flex items-baseline relative"
+      style={{ 
+        width: `${containerWidth}em`, // Dynamic width based on content
+        minWidth: '4em', // Minimum width to prevent collapse
+      }}
+      aria-label={`${NAMES.map(n => n.ariaLabel).join(' ')}`} // Full name for screen readers
+      role="text"
+    >
+      {/**
+       * ANIMATION WRAPPER
+       * - AnimatePresence: Handles enter/exit animations
+       * - mode="wait": Ensures old name exits before new one enters
+       * - initial={false}: Prevents animation on initial mount
+       */}
+      <AnimatePresence mode="wait" initial={false}>
+        <motion.span
+          key={currentName.text}
+          /**
+           * STYLING NOTES:
+           * - Inherits font-size, font-weight from parent h1
+           * - Gradient matches design system colors
+           * - absolute positioning within flex container maintains alignment
+           * - NO margin, padding, or border that could affect alignment
+           */
+          className="absolute left-0 top-0 bg-gradient-to-r from-blue-400 to-purple-500 bg-clip-text text-transparent font-bold whitespace-nowrap"
+          variants={getAnimationVariants(currentName.direction)}
+          initial="initial"
+          animate="animate"
+          exit="exit"
+          transition={{
+            duration: 0.5, // Smooth but not too slow
+            ease: [0.4, 0.0, 0.2, 1], // Material Design easing
+          }}
+          /**
+           * INTERACTION:
+           * - Subtle scale on hover for feedback
+           * - Does not affect layout or alignment
+           */
+          whileHover={{ 
+            scale: 1.05,
+            transition: { duration: 0.2 }
+          }}
+          aria-hidden="true" // Hide from screen readers (full name in parent aria-label)
+        >
+          {currentName.text}
+        </motion.span>
+      </AnimatePresence>
+      
+      {/**
+       * LAYOUT SPACER
+       * Invisible span that reserves vertical space
+       * Ensures container has proper height for baseline alignment
+       */}
+      <span className="invisible" aria-hidden="true">
+        {NAMES[0].text}
+      </span>
+    </span>
+  );
+};
+
 const Hero = () => {
   const [isResumeModalOpen, setIsResumeModalOpen] = useState(false);
 
@@ -38,24 +192,32 @@ const Hero = () => {
                 visible: { transition: { staggerChildren: 0.2 } }
               }}
             >
+              {/**
+               * HERO HEADING WITH ANIMATED NAME
+               * 
+               * STRUCTURE:
+               * Uses inline-flex to group "Hi, I'm" with AnimatedName component
+               * Both elements share same baseline for perfect alignment
+               * 
+               * ACCESSIBILITY:
+               * - Semantic h1 heading tag for SEO
+               * - AnimatedName provides full name via aria-label
+               * - Screen readers will read: "Hi, I'm Shivam Kumar Maurya"
+               * 
+               * STYLING:
+               * - text-5xl md:text-6xl: Responsive text sizing
+               * - font-bold: Matches animated name weight
+               * - flex-wrap: Allows text to wrap on very small screens
+               * - items-baseline: Aligns all inline children to text baseline
+               */}
               <motion.h1 
-                className="text-5xl md:text-6xl font-bold"
+                className="text-5xl md:text-6xl font-bold inline-flex flex-wrap items-baseline gap-x-3"
                 variants={fadeInLeft}
+                role="heading"
+                aria-level="1"
               >
-                Hi, I'm <motion.span 
-                  className="bg-gradient-to-r from-blue-400 to-purple-500 bg-clip-text text-transparent inline-block"
-                  animate={{ 
-                    scale: [1, 1.05, 1],
-                  }}
-                  transition={{
-                    duration: 2,
-                    repeat: Infinity,
-                    ease: "easeInOut"
-                  }}
-                  whileHover={{ scale: 1.1 }}
-                >
-                  Shivam
-                </motion.span>
+                <span className="inline-block">Hi, I'm</span>
+                <AnimatedName />
               </motion.h1>
               <motion.h2 
                 className="text-3xl md:text-4xl text-gray-300"
@@ -199,7 +361,6 @@ const Hero = () => {
                     className="w-full h-full object-cover"
                     style={{ willChange: 'transform' }}
                     whileHover={{ scale: 1.08 }}
-                    transition={{ duration: 0.3 }}
                     animate={{
                       scale: [1, 1.02, 1],
                     }}

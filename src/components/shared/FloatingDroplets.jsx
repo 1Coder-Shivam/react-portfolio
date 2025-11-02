@@ -414,7 +414,7 @@ const FloatingDroplets = () => {
   return (
     <div 
       ref={containerRef}
-      className="absolute inset-0 pointer-events-none z-20 overflow-visible"
+      className="hidden lg:block absolute inset-0 pointer-events-none z-20 overflow-visible"
     >
       {dropletsData.map((droplet, index) => (
         <Bubble
