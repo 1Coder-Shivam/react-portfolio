@@ -3,6 +3,7 @@ import { motion } from 'framer-motion';
 import { FileText, Mail } from 'lucide-react';
 import { scrollToSection } from '../../utils/scrollUtils';
 import ResumeModal from '../shared/ResumeModal';
+import FloatingDroplets from '../shared/FloatingDroplets';
 
 const fadeInUp = {
   hidden: { opacity: 0, y: 30 },
@@ -24,8 +25,9 @@ const Hero = () => {
 
   return (
     <>
-      <section id="home" className="pt-24 pb-16 px-4 sm:px-6 lg:px-8 min-h-screen flex items-center w-full">
-        <div className="w-full max-w-7xl mx-auto">
+      <section id="home" className="relative pt-24 pb-16 px-4 sm:px-6 lg:px-8 min-h-screen flex items-center w-full overflow-hidden">
+        <FloatingDroplets />
+        <div className="w-full max-w-7xl mx-auto relative z-10">
           <div className="grid md:grid-cols-2 gap-12 items-center w-full">
             <motion.div 
               className="space-y-6"
