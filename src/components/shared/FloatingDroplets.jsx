@@ -69,11 +69,8 @@ const formatCount = (count) => {
 };
 
 const FloatingDroplets = () => {
-  // API data state
-  const [youtubeStats, setYoutubeStats] = useState(null);
-  const [leetcodeStats, setLeetcodeStats] = useState(null);
-  const [geeksforgeeksStats, setGeeksforgeeksStats] = useState(null);
-  const [githubStats, setGithubStats] = useState(null);
+  // Single stats state from Postman API
+  const [stats, setStats] = useState(null);
   const [loading, setLoading] = useState(true);
   
   // Mouse position state - only for calculating displacement, not for re-rendering bubbles
@@ -89,77 +86,72 @@ const FloatingDroplets = () => {
   const hasFetched = useRef(false);
 
   /**
-   * Fetch all platform statistics on component mount
-   * Direct API calls - these APIs have proper CORS headers enabled
-   * Uses useRef to completely prevent duplicate calls in React Strict Mode
+   * Fetch all platform statistics from Postman Mock API
+   * Implements sessionStorage caching with time-based expiration
+   * Cache clears when browser tab/window is closed
+   * Cache duration: 1 minute (can be adjusted)
    */
   useEffect(() => {
     // Skip if already fetched (prevents React Strict Mode double-mount)
     if (hasFetched.current) return;
     hasFetched.current = true;
 
-    const fetchAllStats = async () => {
+    const CACHE_KEY = 'portfolio_stats_cache';
+    const CACHE_DURATION = 60 * 1000; // 1 minute in milliseconds
+
+    const fetchStats = async () => {
       try {
-        // Fetch YouTube stats
-        try {
-          const youtubeResponse = await fetch(
-            'https://www.googleapis.com/youtube/v3/channels?part=statistics&id=UCGuAwCxx0srdoTOLe1_RbJA&key=AIzaSyBOsBZlQZSl376KApPlN6Cb5gD5XQBFIDY'
-          );
-          const youtubeData = await youtubeResponse.json();
-          if (youtubeData.items && youtubeData.items.length > 0) {
-            setYoutubeStats(youtubeData.items[0].statistics);
+        // Check if we have cached data in sessionStorage
+        const cachedData = sessionStorage.getItem(CACHE_KEY);
+        
+        if (cachedData) {
+          const { data, timestamp } = JSON.parse(cachedData);
+          const now = Date.now();
+          
+          // Check if cache is still valid
+          if (now - timestamp < CACHE_DURATION) {
+            const ageInSeconds = Math.round((now - timestamp) / 1000);
+            console.log(`✅ Using cached stats (age: ${ageInSeconds} seconds)`);
+            setStats(data);
+            setLoading(false);
+            return;
+          } else {
+            console.log('⏰ Cache expired, fetching fresh data...');
           }
-        } catch (error) {
-          console.error('Error fetching YouTube stats:', error);
         }
 
-        // Fetch LeetCode stats directly
-        try {
-          const leetcodeResponse = await fetch(
-            'https://alfa-leetcode-api.onrender.com/1Coder_skm/solved'
-          );
-          const leetcodeData = await leetcodeResponse.json();
-          if (leetcodeData.solvedProblem !== undefined) {
-            setLeetcodeStats(leetcodeData);
-          }
-        } catch (error) {
-          console.error('Error fetching LeetCode stats:', error);
-        }
-
-        // Fetch GeeksforGeeks stats directly
-        try {
-          const gfgResponse = await fetch(
-            'https://gfg-stats.tashif.codes/6868shivamkumarmaurya'
-          );
-          const gfgData = await gfgResponse.json();
-          if (gfgData.totalProblemsSolved) {
-            setGeeksforgeeksStats(gfgData);
-          }
-        } catch (error) {
-          console.error('Error fetching GeeksforGeeks stats:', error);
-        }
-
-        // Fetch GitHub stats directly
-        try {
-          const githubResponse = await fetch(
-            'https://github-contributions-api.jogruber.de/v4/1Coder-Shivam'
-          );
-          const githubData = await githubResponse.json();
-          if (githubData.total) {
-            setGithubStats(githubData);
-          }
-        } catch (error) {
-          console.error('Error fetching GitHub stats:', error);
-        }
-
+        // Fetch fresh data from API
+        console.log('🌐 Fetching stats from API...');
+        const response = await fetch(
+          'https://efee5ad6-d8aa-428d-aa46-8ccf86bdbcdf.mock.pstmn.io/details'
+        );
+        const data = await response.json();
+        
+        // Save to sessionStorage with timestamp
+        sessionStorage.setItem(CACHE_KEY, JSON.stringify({
+          data,
+          timestamp: Date.now()
+        }));
+        
+        console.log('✅ Stats fetched and cached in session');
+        setStats(data);
         setLoading(false);
       } catch (error) {
-        console.error('Error fetching stats:', error);
+        console.error('❌ Error fetching stats:', error);
+        
+        // Fallback: try to use expired cache if available
+        const cachedData = sessionStorage.getItem(CACHE_KEY);
+        if (cachedData) {
+          const { data } = JSON.parse(cachedData);
+          console.log('⚠️ Using expired cache as fallback');
+          setStats(data);
+        }
+        
         setLoading(false);
       }
     };
 
-    fetchAllStats();
+    fetchStats();
   }, []);
 
   /**
@@ -227,7 +219,7 @@ const FloatingDroplets = () => {
    * This is stable and only depends on API data - bubbles never unmount
    */
   const dropletsData = useMemo(() => {
-    if (!youtubeStats && !leetcodeStats && !geeksforgeeksStats && !githubStats) {
+    if (!stats) {
       return [];
     }
 
@@ -236,7 +228,7 @@ const FloatingDroplets = () => {
       {
         id: 1,
         label: 'YouTube Views',
-        value: youtubeStats ? formatCount(youtubeStats.viewCount) : '...',
+        value: stats.youtubeViewsCount || '...',
         icon: Eye,
         theme: {
           gradient: 'from-red-500 to-red-600',
@@ -251,7 +243,7 @@ const FloatingDroplets = () => {
       {
         id: 2,
         label: 'YouTube Subscribers',
-        value: youtubeStats ? youtubeStats.subscriberCount : '...',
+        value: stats.youtubeSubscribers || '...',
         icon: Users,
         theme: {
           gradient: 'from-red-500 to-red-600',
@@ -266,7 +258,7 @@ const FloatingDroplets = () => {
       {
         id: 3,
         label: 'LeetCode Problems',
-        value: leetcodeStats ? leetcodeStats.solvedProblem || '...' : '...',
+        value: stats.leetcodeSolved || '...',
         icon: LeetCodeIcon,
         theme: {
           gradient: 'from-yellow-500 to-orange-500',
@@ -281,7 +273,7 @@ const FloatingDroplets = () => {
       {
         id: 4,
         label: 'GeeksforGeeks Problems',
-        value: geeksforgeeksStats ? geeksforgeeksStats.totalProblemsSolved : '...',
+        value: stats.gfgSolved || '...',
         icon: GeeksforGeeksIcon,
         theme: {
           gradient: 'from-green-500 to-emerald-600',
@@ -296,9 +288,7 @@ const FloatingDroplets = () => {
       {
         id: 5,
         label: 'GitHub Contributions',
-        value: githubStats && githubStats.total 
-          ? Object.values(githubStats.total).reduce((sum, count) => sum + count, 0).toString()
-          : '...',
+        value: stats.githubContribution || '...',
         icon: GitHubIcon,
         theme: {
           gradient: 'from-purple-500 to-indigo-600',
@@ -313,7 +303,7 @@ const FloatingDroplets = () => {
       {
         id: 6,
         label: 'LinkedIn Followers',
-        value: '13K',
+        value: stats.linkedinFollowers || '...',
         icon: Linkedin,
         theme: {
           gradient: 'from-blue-500 to-blue-700',
@@ -325,7 +315,7 @@ const FloatingDroplets = () => {
         },
       },
     ];
-  }, [youtubeStats, leetcodeStats, geeksforgeeksStats, githubStats]);
+  }, [stats]);
 
   /**
    * Calculate home positions using polar coordinates
