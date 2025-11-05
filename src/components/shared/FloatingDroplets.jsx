@@ -84,12 +84,20 @@ const FloatingDroplets = () => {
   
   // Orbit center coordinates (relative to container)
   const [orbitCenter, setOrbitCenter] = useState({ x: 0, y: 0 });
+  
+  // Ref to prevent duplicate API calls in React Strict Mode
+  const hasFetched = useRef(false);
 
   /**
    * Fetch all platform statistics on component mount
-   * This happens ONCE - bubbles remain stable regardless of API state
+   * Direct API calls - these APIs have proper CORS headers enabled
+   * Uses useRef to completely prevent duplicate calls in React Strict Mode
    */
   useEffect(() => {
+    // Skip if already fetched (prevents React Strict Mode double-mount)
+    if (hasFetched.current) return;
+    hasFetched.current = true;
+
     const fetchAllStats = async () => {
       try {
         // Fetch YouTube stats
@@ -105,52 +113,40 @@ const FloatingDroplets = () => {
           console.error('Error fetching YouTube stats:', error);
         }
 
-        // Fetch LeetCode stats (using CORS proxy)
+        // Fetch LeetCode stats directly
         try {
-          const leetcodeUrl = encodeURIComponent('https://leetcode-api-pied.vercel.app/user/1Coder_skm');
           const leetcodeResponse = await fetch(
-            `https://api.allorigins.win/get?url=${leetcodeUrl}`
+            'https://alfa-leetcode-api.onrender.com/1Coder_skm/solved'
           );
-          const leetcodeProxyData = await leetcodeResponse.json();
-          if (leetcodeProxyData.contents) {
-            const leetcodeData = JSON.parse(leetcodeProxyData.contents);
-            if (leetcodeData.submitStats) {
-              setLeetcodeStats(leetcodeData.submitStats);
-            }
+          const leetcodeData = await leetcodeResponse.json();
+          if (leetcodeData.solvedProblem !== undefined) {
+            setLeetcodeStats(leetcodeData);
           }
         } catch (error) {
           console.error('Error fetching LeetCode stats:', error);
         }
 
-        // Fetch GeeksforGeeks stats (using CORS proxy)
+        // Fetch GeeksforGeeks stats directly
         try {
-          const gfgUrl = encodeURIComponent('https://gfg-stats.tashif.codes/6868shivamkumarmaurya');
           const gfgResponse = await fetch(
-            `https://api.allorigins.win/get?url=${gfgUrl}`
+            'https://gfg-stats.tashif.codes/6868shivamkumarmaurya'
           );
-          const gfgProxyData = await gfgResponse.json();
-          if (gfgProxyData.contents) {
-            const gfgData = JSON.parse(gfgProxyData.contents);
-            if (gfgData.totalProblemsSolved) {
-              setGeeksforgeeksStats(gfgData);
-            }
+          const gfgData = await gfgResponse.json();
+          if (gfgData.totalProblemsSolved) {
+            setGeeksforgeeksStats(gfgData);
           }
         } catch (error) {
           console.error('Error fetching GeeksforGeeks stats:', error);
         }
 
-        // Fetch GitHub stats (using CORS proxy)
+        // Fetch GitHub stats directly
         try {
-          const githubUrl = encodeURIComponent('https://github-contributions-api.jogruber.de/v4/1Coder-Shivam');
           const githubResponse = await fetch(
-            `https://api.allorigins.win/get?url=${githubUrl}`
+            'https://github-contributions-api.jogruber.de/v4/1Coder-Shivam'
           );
-          const githubProxyData = await githubResponse.json();
-          if (githubProxyData.contents) {
-            const githubData = JSON.parse(githubProxyData.contents);
-            if (githubData.total) {
-              setGithubStats(githubData);
-            }
+          const githubData = await githubResponse.json();
+          if (githubData.total) {
+            setGithubStats(githubData);
           }
         } catch (error) {
           console.error('Error fetching GitHub stats:', error);
@@ -270,7 +266,7 @@ const FloatingDroplets = () => {
       {
         id: 3,
         label: 'LeetCode Problems',
-        value: leetcodeStats ? leetcodeStats.acSubmissionNum[0]?.count || '...' : '...',
+        value: leetcodeStats ? leetcodeStats.solvedProblem || '...' : '...',
         icon: LeetCodeIcon,
         theme: {
           gradient: 'from-yellow-500 to-orange-500',
@@ -317,7 +313,7 @@ const FloatingDroplets = () => {
       {
         id: 6,
         label: 'LinkedIn Followers',
-        value: '12.7K',
+        value: '13K',
         icon: Linkedin,
         theme: {
           gradient: 'from-blue-500 to-blue-700',
