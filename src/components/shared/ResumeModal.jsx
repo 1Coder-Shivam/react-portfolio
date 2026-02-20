@@ -1,7 +1,7 @@
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, ExternalLink } from 'lucide-react';
 
-const RESUME_DRIVE_ID = '1qhNTqk-6I0Gke2FLTd92L-SXhhAtklnJ';
+const RESUME_DRIVE_ID = '1XkIlnl52dnFHlOFoMGCBz5bntZldsGek';
 const RESUME_PREVIEW_URL = `https://drive.google.com/file/d/${RESUME_DRIVE_ID}/preview`;
 const RESUME_DOWNLOAD_URL = `https://drive.google.com/uc?export=download&id=${RESUME_DRIVE_ID}`;
 const RESUME_VIEW_URL = `https://drive.google.com/file/d/${RESUME_DRIVE_ID}/view?usp=drive_link`;
@@ -14,13 +14,13 @@ const ResumeModal = ({ isOpen, onClose }) => {
   };
 
   const modalVariants = {
-    hidden: { 
-      opacity: 0, 
+    hidden: {
+      opacity: 0,
       scale: 0.8,
       y: 50
     },
-    visible: { 
-      opacity: 1, 
+    visible: {
+      opacity: 1,
       scale: 1,
       y: 0,
       transition: {
@@ -29,8 +29,8 @@ const ResumeModal = ({ isOpen, onClose }) => {
         stiffness: 300
       }
     },
-    exit: { 
-      opacity: 0, 
+    exit: {
+      opacity: 0,
       scale: 0.8,
       y: 50,
       transition: { duration: 0.2 }
@@ -66,12 +66,12 @@ const ResumeModal = ({ isOpen, onClose }) => {
                 >
                   <X className="w-6 h-6" />
                 </motion.button>
-                
+
                 <div className="p-4 bg-gray-800 border-b border-gray-700">
                   <h2 className="text-2xl font-bold text-white">Shivam Kumar Maurya - Resume</h2>
                   <p className="text-gray-400 text-sm mt-1">View or download my resume</p>
                 </div>
-                
+
                 <div className="h-[calc(90vh-100px)] overflow-auto bg-gray-800">
                   <iframe
                     src={RESUME_PREVIEW_URL}
@@ -80,7 +80,7 @@ const ResumeModal = ({ isOpen, onClose }) => {
                     allow="autoplay"
                   />
                 </div>
-                
+
                 <div className="p-4 bg-gray-800 border-t border-gray-700 flex gap-3 justify-end flex-wrap">
                   <motion.a
                     href={RESUME_DOWNLOAD_URL}
